@@ -1,0 +1,110 @@
+import os
+import pickle
+
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end_of_word = False
+
+class SpellChecker:
+    def __init__(self):
+        self.root = TrieNode()
+        self.load_dictionary()
+
+    def load_dictionary(self):
+        dictionary_file = 'dictionary.txt'
+        if os.path.exists(dictionary_file):
+            with open(dictionary_file, 'rb') as file:
+                self.root = pickle.load(file)
+
+    def save_dictionary(self):
+        dictionary_file = 'dictionary.txt'
+        with open(dictionary_file, 'wb') as file:
+            pickle.dump(self.root, file)
+
+    def insert_word(self, word):
+        node = self.root
+        for char in word:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.is_end_of_word = True
+
+    def search_word(self, word):
+        node = self.root
+        for char in word:
+            if char not in node.children:
+                return False
+            node = node.children[char]
+        return node.is_end_of_word
+
+    def suggest_corrections(self, word):
+        suggestions = []
+        self._suggest_corrections(self.root, word, "", suggestions)
+        return suggestions
+
+    def _suggest_corrections(self, node, remaining, current, suggestions):
+        if node.is_end_of_word:
+            suggestions.append(current)
+
+        for char, child_node in node.children.items():
+            self._suggest_corrections(child_node, remaining, current + char, suggestions)
+
+    def modify_dictionary(self, word, add=True):
+        if add:
+            self.insert_word(word)
+        else:
+            # Remove word from the dictionary
+            self._remove_word(self.root, word, 0)
+
+    def _remove_word(self, node, word, index):
+        if index == len(word):
+            node.is_end_of_word = False
+            return len(node.children) == 0
+
+        char = word[index]
+        child_node = node.children[char]
+
+        if self._remove_word(child_node, word, index + 1):
+            del node.children[char]
+
+        return len(node.children) == 0
+
+if __name__ == "__main__":
+    spell_checker = SpellChecker()
+
+    while True:
+        user_input = input("Enter a potentially misspelled word (q to quit): ")
+        
+        if user_input.lower() == 'q':
+            break
+
+        if spell_checker.search_word(user_input):
+            print("The word is spelled correctly.")
+        else:
+            suggestions = spell_checker.suggest_corrections(user_input)
+            print("Suggestions:", suggestions)
+
+            modify_dict = input("Do you want to add this word to the dictionary? (y/n): ").lower()
+            if modify_dict == 'y':
+                spell_checker.modify_dictionary(user_input)
+                spell_checker.save_dictionary()
+                print("Word added to the dictionary.")
+            elif modify_dict == 'n':
+                print("Word not added to the dictionary.")
+            else:
+                print("Invalid input. Word not added to the dictionary.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+https://github.com/204g1a05a7/DSAProject2.git
